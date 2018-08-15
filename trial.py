@@ -25,9 +25,13 @@ import os
 import subprocess
 import sys
 
-if len(sys.argv) != 2 or sys.argv[1][0] == '.':
-    print ("Usage %s absolute_image_directory" % sys.argv[0])
+if len(sys.argv) != 4 or sys.argv[1][0] == '.':
+    print ("Usage %s image_directory[absolute] densify_flag[0/1] refine_flag[0/1]" % sys.argv[0])
     sys.exit(1)
+
+# optional steps in openMVS
+DENSIFY = bool(int(sys.argv[2]))
+REFINE = bool(int(sys.argv[3]))
 
 input_dir = sys.argv[1]
 output_dir = os.path.dirname(os.path.abspath(__file__)) + "/results"
@@ -69,33 +73,41 @@ print ("5. Colorize Structure")
 pColor = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeSfM_DataColor"),  "-i", reconstruction_dir+"/sfm_data.bin", "-o", os.path.join(reconstruction_dir,"colorized.ply")] )
 pColor.wait()
 
+filename = "scene"
+
 # export openMVG to openMVS
 print ("6. Export openMVG to openMVS")
-pExport = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_openMVG2openMVS"), "-i", reconstruction_dir+"/sfm_data.bin", "-o", reconstruction_dir+"/scene.mvs"])
+pExport = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_openMVG2openMVS"), "-i", reconstruction_dir+"/sfm_data.bin", "-o", reconstruction_dir+"/"+filename+".mvs"])
 pExport.wait()
 
 # densify point cloud (optional)
-print ("7. Densify point clouds")
-pDensify = subprocess.Popen( [os.path.join(OPENMVS_SFM_BIN, "DensifyPointCloud"), reconstruction_dir+"/scene.mvs"])
-pDensify.wait()
+if DENSIFY:
+	print ("7. Densify point clouds")
+	pDensify = subprocess.Popen( [os.path.join(OPENMVS_SFM_BIN, "DensifyPointCloud"), reconstruction_dir+"/"+filename+".mvs"])
+	pDensify.wait()
+	filename += "_dense"
 
 # mesh reconstruction
 print ("8. Rough mesh reconstruction")
-pMesh = subprocess.Popen( [os.path.join(OPENMVS_SFM_BIN, "ReconstructMesh"), reconstruction_dir+"/scene_dense.mvs"])
+pMesh = subprocess.Popen( [os.path.join(OPENMVS_SFM_BIN, "ReconstructMesh"), reconstruction_dir+"/"+filename+".mvs"])
 pMesh.wait()
+filename += "_mesh"
 
-# # mesh refining (optional)
-# print ("9. Refine mesh")
-# pRefine = subprocess.Popen( [os.path.join(OPENMVS_SFM_BIN, "RefineMesh"), reconstruction_dir+"/scene_mesh.mvs"])
-# pRefine.wait()
+# mesh refining (optional)
+if REFINE:
+	print ("9. Refine mesh")
+	pRefine = subprocess.Popen( [os.path.join(OPENMVS_SFM_BIN, "RefineMesh"), reconstruction_dir+"/"+filename+".mvs"])
+	pRefine.wait()
+	filename += "_refine"
 
 # mesh texturing
 print ("10. Texture mesh")
-pTexture = subprocess.Popen( [os.path.join(OPENMVS_SFM_BIN, "TextureMesh"), reconstruction_dir+"/scene_dense_mesh.mvs"])
+pTexture = subprocess.Popen( [os.path.join(OPENMVS_SFM_BIN, "TextureMesh"), reconstruction_dir+"/"+filename+".mvs"])
 pTexture.wait()
+filename += "_texture"
 
 # visualizatin
 print ("11. Visualize reconstruction")
-pVisual = subprocess.Popen( [os.path.join(OPENMVS_SFM_BIN, "Viewer"), reconstruction_dir+"/scene_dense_mesh_texture.mvs"])
+pVisual = subprocess.Popen( [os.path.join(OPENMVS_SFM_BIN, "Viewer"), reconstruction_dir+"/"+filename+".mvs"])
 pVisual.wait()
 
