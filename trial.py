@@ -8,10 +8,9 @@
 # Modified by Pierre Moulon
 # Further modified by Wudao Ling
 #
-# usage : python openmvg.py image_dir
-#
-# image_dir is the input directory where images are located
-# output will be saved at python file location
+# usage : python trial.py absolute_image_dir densify_flag refine_flag
+# result dir will be saved at python file location
+
 
 # Indicate the openMVG/openMVS binary directory
 OPENMVG_SFM_BIN = "/home/wudao/openMVG_Build/Linux-x86_64-RELEASE"
@@ -21,11 +20,18 @@ CAMERA_SENSOR_WIDTH_DATABASE = "/home/wudao/openMVG/src/openMVG/exif/sensor_widt
 # endoscope camera intrinsics Kmatrix: “f;0;ppx;0;f;ppy;0;0;1”
 CAMERA_INTRINSICS = "474.8972; 0; 322.1932; 0; 474.5878; 242.7300; 0; 0; 1"
 
+# parallel computation
+THREAD_NUMBER = 4
+
 import os
 import subprocess
 import sys
 
-if len(sys.argv) != 4 or sys.argv[1][0] == '.':
+def check_flag(str):
+	flag = int(str)
+	return flag==0 or flag==1 
+
+if len(sys.argv) != 4 or sys.argv[1][0] == '.' or not check_flag(sys.argv[2]) or not check_flag(sys.argv[3]):
     print ("Usage %s image_directory[absolute] densify_flag[0/1] refine_flag[0/1]" % sys.argv[0])
     sys.exit(1)
 
@@ -58,7 +64,7 @@ pIntrisics.wait()
 
 print ("2. Compute features")
 # pFeatures = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeFeatures"),  "-i", matches_dir+"/sfm_data.json", "-o", matches_dir, "-m", "SIFT"] )
-pFeatures = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeFeatures"),  "-i", matches_dir+"/sfm_data.json", "-o", matches_dir, "-m", "AKAZE_FLOAT"] )
+pFeatures = subprocess.Popen( [os.path.join(OPENMVG_SFM_BIN, "openMVG_main_ComputeFeatures"),  "-i", matches_dir+"/sfm_data.json", "-o", matches_dir, "-m", "AKAZE_FLOAT", "-p", "HIGH", "-n", str(THREAD_NUMBER)])
 pFeatures.wait()
 
 print ("3. Compute matches")
